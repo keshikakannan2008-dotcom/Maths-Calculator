@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Gauss-Jordan Matrix Solver</title>
+
+<style>
+
+body{
+font-family:Consolas, monospace;
+background:#0f172a;
+color:#e2e8f0;
+text-align:center;
+padding:30px;
+}
+
+.container{
+background:#1e293b;
+padding:25px;
+border-radius:10px;
+box-shadow:0 0 20px rgba(0,0,0,0.6);
+display:inline-block;
+}
+
+h2{
+color:#38bdf8;
+}
+
+select{
+padding:6px;
+background:#020617;
+color:white;
+border:1px solid #334155;
+}
+
+.matrix{
+display:grid;
+gap:6px;
+justify-content:center;
+margin-top:15px;
+margin-bottom:15px;
+}
+
+.matrix input{
+width:60px;
+height:40px;
+background:#020617;
+color:#38bdf8;
+border:1px solid #334155;
+text-align:center;
+font-size:14px;
+border-radius:5px;
+}
+
+.matrix input:focus{
+border-color:#38bdf8;
+outline:none;
+}
+
+button{
+padding:10px 16px;
+margin:6px;
+border:none;
+border-radius:5px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.solve{
+background:#22c55e;
+color:white;
+}
+
+.reset{
+background:#ef4444;
+color:white;
+}
+
+#steps{
+margin-top:20px;
+background:#020617;
+padding:15px;
+border-radius:8px;
+max-width:650px;
+text-align:left;
+white-space:pre;
+overflow:auto;
+font-size:13px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Gauss-Jordan Matrix Solver</h2>
+
+<label>Matrix Size:</label>
+
+<select id="size" onchange="generateMatrix()">
+<option value="2">2 × 2</option>
+<option value="3" selected>3 × 3</option>
+<option value="4">4 × 4</option>
+</select>
+
+<div id="matrixContainer"></div>
+
+<button class="solve" onclick="solve()">Solve</button>
+<button class="reset" onclick="resetMatrix()">Reset</button>
+
+<div id="steps"></div>
+
+</div>
+
+<script>
+
+let size=3;
+
+function generateMatrix(){
+
+size=parseInt(document.getElementById("size").value);
+
+let container=document.getElementById("matrixContainer");
+container.innerHTML="";
+
+let grid=document.createElement("div");
+grid.className="matrix";
+grid.style.gridTemplateColumns=`repeat(${size+1},70px)`;
+
+for(let i=0;i<size;i++){
+
+for(let j=0;j<size+1;j++){
+
+let input=document.createElement("input");
+input.type="number";
+input.id=`cell_${i}_${j}`;
+
+let saved=localStorage.getItem(input.id);
+if(saved) input.value=saved;
+
+input.addEventListener("input",()=>{
+localStorage.setItem(input.id,input.value);
+});
+
+grid.appendChild(input);
+
+}
+
+}
+
+container.appendChild(grid);
+}
+
+generateMatrix();
+
+function matrixToString(m){
+
+let text="";
+
+for(let i=0;i<size;i++){
+
+text+="[ ";
+
+for(let j=0;j<size;j++)
+text+=Math.round(m[i][j])+" ";
+
+text+="| "+Math.round(m[i][size])+" ]\n";
+
+}
+
+return text;
+}
+
+async function solve(){
+
+let a=[];
+
+for(let i=0;i<size;i++){
+
+a[i]=[];
+
+for(let j=0;j<size+1;j++){
+
+let v=parseFloat(document.getElementById(`cell_${i}_${j}`).value)||0;
+a[i][j]=v;
+
+}
+
+}
+
+let steps="PRE-PROCESS\nAugmented Matrix\n";
+steps+=matrixToString(a);
+
+for(let i=0;i<size;i++){
+
+let pivot=a[i][i];
+
+if(pivot==0) continue;
+
+steps+="\nR"+(i+1)+" → R"+(i+1)+" ÷ "+pivot+"\n";
+
+for(let j=0;j<size+1;j++)
+a[i][j]/=pivot;
+
+steps+=matrixToString(a);
+
+for(let k=0;k<size;k++){
+
+if(k!=i){
+
+let factor=a[k][i];
+
+steps+="\nR"+(k+1)+" → R"+(k+1)+" - ("+factor+")R"+(i+1)+"\n";
+
+for(let j=0;j<size+1;j++)
+a[k][j]-=factor*a[i][j];
+
+steps+=matrixToString(a);
+
+}
+
+}
+
+document.getElementById("steps").textContent=steps;
+
+await new Promise(r=>setTimeout(r,600));
+
+}
+
+let noSolution=false;
+let infinite=false;
+
+for(let i=0;i<size;i++){
+
+let allZero=true;
+
+for(let j=0;j<size;j++)
+if(Math.abs(a[i][j])>0.0001) allZero=false;
+
+if(allZero && Math.abs(a[i][size])>0.0001)
+noSolution=true;
+
+if(allZero && Math.abs(a[i][size])<0.0001)
+infinite=true;
+
+}
+
+steps+="\nRESULT\n";
+
+if(noSolution){
+steps+="No Solution (Inconsistent System)";
+}
+else if(infinite){
+steps+="Infinite Solutions (Dependent System)";
+}
+else{
+for(let i=0;i<size;i++)
+steps+="x"+(i+1)+" = "+Math.round(a[i][size])+"\n";
+}
+
+document.getElementById("steps").textContent=steps;
+
+}
+
+function resetMatrix(){
+
+localStorage.clear();
+generateMatrix();
+document.getElementById("steps").textContent="";
+
+}
+
+</script>
+
+</body>
+</html>
